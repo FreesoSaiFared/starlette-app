@@ -1,76 +1,285 @@
-import React, { useRef, useMemo, Suspense } from 'react';
+import React, { useRef, useMemo, useEffect, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 interface StarletModelProps {
   action: 'idle' | 'dance' | 'bow';
   customModelUrl?: string;
   customModelScale?: number;
   customModelYOffset?: number;
+  customModelAnimations?: {
+    idle?: string;
+    dance?: string;
+    bow?: string;
+  };
+  onClipsDiscovered?: (clipNames: string[]) => void;
   corsetColor?: string;
   plumeColor?: string;
   accentColor?: string;
 }
 
-// Sub-component to load external GLTF/GLB converted models (e.g. from chatgpt-56-sol conversion)
-const CustomGLTFPrimitive: React.FC<{
+// Matching helper for finding clips by explicit name or semantic action keywords
+function findMatchingClip(
+  clips: THREE.AnimationClip[],
+  explicitName?: string,
+  actionType?: 'idle' | 'dance' | 'bow'
+): THREE.AnimationClip | null {
+  if (!clips || clips.length === 0) return null;
+
+  // 1. Explicit mapping always wins over automatic detection
+  if (explicitName && explicitName.trim().length > 0) {
+    const target = explicitName.trim().toLowerCase();
+
+    // Exact case-insensitive match
+    const exact = clips.find((c) => c.name.toLowerCase() === target);
+    if (exact) return exact;
+
+    // Cleaned match (ignoring separators, spaces, underscores, dashes)
+    const cleanTarget = target.replace(/[^a-z0-9]/g, '');
+    const cleanMatch = clips.find(
+      (c) => c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanTarget
+    );
+    if (cleanMatch) return cleanMatch;
+
+    // Substring match
+    const subMatch = clips.find((c) => c.name.toLowerCase().includes(target));
+    if (subMatch) return subMatch;
+  }
+
+  // 2. Automatic matching based on standard semantic animation naming
+  if (!actionType) return null;
+
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  if (actionType === 'idle') {
+    const priorityKeywords = ['idle', 'standingidle', 'defaultidle', 'standing', 'breathe', 'loop'];
+    for (const key of priorityKeywords) {
+      const match = clips.find((c) => normalize(c.name) === key);
+      if (match) return match;
+    }
+    for (const key of ['idle', 'standing', 'stand', 'pose']) {
+      const match = clips.find((c) => c.name.toLowerCase().includes(key));
+      if (match) return match;
+    }
+    // If only 1 clip in file, treat as idle loop
+    if (clips.length === 1) return clips[0];
+  }
+
+  if (actionType === 'dance') {
+    const priorityKeywords = ['dance', 'cancan', 'performance', 'choreography', 'dancing', 'routine'];
+    for (const key of priorityKeywords) {
+      const match = clips.find((c) => normalize(c.name) === key);
+      if (match) return match;
+    }
+    for (const key of ['dance', 'cancan', 'perf', 'routine', 'choreo', 'action']) {
+      const match = clips.find((c) => c.name.toLowerCase().includes(key));
+      if (match) return match;
+    }
+  }
+
+  if (actionType === 'bow') {
+    const priorityKeywords = ['bow', 'curtsy', 'curtsey', 'closingbow', 'applause', 'thankyou'];
+    for (const key of priorityKeywords) {
+      const match = clips.find((c) => normalize(c.name) === key);
+      if (match) return match;
+    }
+    for (const key of ['bow', 'curtsy', 'curtsey', 'salute', 'end']) {
+      const match = clips.find((c) => c.name.toLowerCase().includes(key));
+      if (match) return match;
+    }
+  }
+
+  return null;
+}
+
+// Sub-component to load external GLTF/GLB models with real skeletal animation playback
+const AnimatedGLTFPerformer: React.FC<{
   url: string;
   scale?: number;
   yOffset?: number;
   action: 'idle' | 'dance' | 'bow';
-}> = ({ url, scale = 1.0, yOffset = -1.4, action }) => {
+  customModelAnimations?: {
+    idle?: string;
+    dance?: string;
+    bow?: string;
+  };
+  onClipsDiscovered?: (clipNames: string[]) => void;
+}> = ({ url, scale = 1.0, yOffset = -1.4, action, customModelAnimations, onClipsDiscovered }) => {
   const groupRef = useRef<THREE.Group>(null);
   const gltf = useGLTF(url);
 
+  // Safe skinned mesh cloning using SkeletonUtils.clone to prevent shared rig corruption
+  const clonedScene = useMemo(() => {
+    if (!gltf.scene) return null;
+    const clone = SkeletonUtils.clone(gltf.scene);
+    clone.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    return clone;
+  }, [gltf.scene]);
+
+  // Extract animation clips
+  const clips = useMemo(() => gltf.animations || [], [gltf.animations]);
+
+  // Notify parent of discovered clip names
+  useEffect(() => {
+    if (onClipsDiscovered && clips.length > 0) {
+      onClipsDiscovered(clips.map((c) => c.name));
+    }
+  }, [clips, onClipsDiscovered]);
+
+  // Animation matching
+  const idleClip = useMemo(
+    () => findMatchingClip(clips, customModelAnimations?.idle, 'idle'),
+    [clips, customModelAnimations?.idle]
+  );
+  const danceClip = useMemo(
+    () => findMatchingClip(clips, customModelAnimations?.dance, 'dance'),
+    [clips, customModelAnimations?.dance]
+  );
+  const bowClip = useMemo(
+    () => findMatchingClip(clips, customModelAnimations?.bow, 'bow'),
+    [clips, customModelAnimations?.bow]
+  );
+
+  // Create AnimationMixer bound to the cloned scene root
+  const mixer = useMemo(() => {
+    if (!clonedScene) return null;
+    return new THREE.AnimationMixer(clonedScene);
+  }, [clonedScene]);
+
+  // Clean up mixer when unmounting or changing dancer
+  useEffect(() => {
+    return () => {
+      if (mixer && clonedScene) {
+        mixer.stopAllAction();
+        mixer.uncacheRoot(clonedScene);
+      }
+    };
+  }, [mixer, clonedScene]);
+
+  const currentActionRef = useRef<THREE.AnimationAction | null>(null);
+
+  // Handle action switching and smooth crossfading
+  useEffect(() => {
+    if (!mixer || !clonedScene) return;
+
+    // Pick target clip; if dance or bow is missing, fallback to idleClip for skeletal playback
+    const targetClip =
+      action === 'dance' ? (danceClip || idleClip) :
+      action === 'bow' ? (bowClip || idleClip) :
+      idleClip;
+
+    if (!targetClip) {
+      if (currentActionRef.current) {
+        currentActionRef.current.fadeOut(0.35);
+        currentActionRef.current = null;
+      }
+      return;
+    }
+
+    const nextAction = mixer.clipAction(targetClip, clonedScene);
+    const prevAction = currentActionRef.current;
+
+    if (prevAction !== nextAction) {
+      if (prevAction) {
+        prevAction.fadeOut(0.35);
+      }
+      nextAction.reset();
+      nextAction.setEffectiveTimeScale(1);
+      nextAction.setEffectiveWeight(1);
+      nextAction.setLoop(THREE.LoopRepeat, Infinity);
+      nextAction.fadeIn(0.35);
+      nextAction.play();
+      currentActionRef.current = nextAction;
+    }
+  }, [mixer, clonedScene, action, idleClip, danceClip, bowClip]);
+
+  // Render frame update: tick mixer and apply last-resort transform fallback ONLY if no clip exists
   useFrame((state, delta) => {
+    if (mixer) {
+      mixer.update(delta);
+    }
     if (!groupRef.current) return;
+
     const t = state.clock.getElapsedTime();
     const lerpSpeed = Math.min(1, delta * 6);
 
     if (action === 'dance') {
-      const danceTempo = t * 6;
-      groupRef.current.position.y = THREE.MathUtils.lerp(
-        groupRef.current.position.y,
-        yOffset + Math.abs(Math.sin(danceTempo * 2)) * 0.25,
-        lerpSpeed
-      );
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(
-        groupRef.current.rotation.y,
-        Math.sin(danceTempo) * 0.4,
-        lerpSpeed
-      );
+      if (danceClip) {
+        // Real skeletal dance animation active - keep root stationary
+        groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, yOffset, lerpSpeed);
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, 0, lerpSpeed);
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+      } else {
+        // Last-resort fallback transform animation
+        const danceTempo = t * 6;
+        groupRef.current.position.y = THREE.MathUtils.lerp(
+          groupRef.current.position.y,
+          yOffset + Math.abs(Math.sin(danceTempo * 2)) * 0.25,
+          lerpSpeed
+        );
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(
+          groupRef.current.rotation.y,
+          Math.sin(danceTempo) * 0.4,
+          lerpSpeed
+        );
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+      }
     } else if (action === 'bow') {
-      const bowPhase = Math.sin(t * 2);
-      groupRef.current.position.y = THREE.MathUtils.lerp(
-        groupRef.current.position.y,
-        yOffset - Math.max(0, bowPhase) * 0.3,
-        lerpSpeed
-      );
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(
-        groupRef.current.rotation.x,
-        0.3 + Math.max(0, bowPhase) * 0.3,
-        lerpSpeed
-      );
+      if (bowClip) {
+        // Real skeletal bow animation active - keep root stationary
+        groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, yOffset, lerpSpeed);
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, 0, lerpSpeed);
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+      } else {
+        // Last-resort fallback transform animation
+        const bowPhase = Math.sin(t * 2);
+        groupRef.current.position.y = THREE.MathUtils.lerp(
+          groupRef.current.position.y,
+          yOffset - Math.max(0, bowPhase) * 0.3,
+          lerpSpeed
+        );
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(
+          groupRef.current.rotation.x,
+          0.3 + Math.max(0, bowPhase) * 0.3,
+          lerpSpeed
+        );
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, 0, lerpSpeed);
+      }
     } else {
-      const idleSpeed = t * 1.6;
-      groupRef.current.position.y = THREE.MathUtils.lerp(
-        groupRef.current.position.y,
-        yOffset + Math.sin(idleSpeed * 2) * 0.05,
-        lerpSpeed
-      );
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(
-        groupRef.current.rotation.y,
-        Math.sin(idleSpeed) * 0.15,
-        lerpSpeed
-      );
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+      // Idle action
+      if (idleClip) {
+        // Real skeletal idle animation active - keep root stationary
+        groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, yOffset, lerpSpeed);
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, 0, lerpSpeed);
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+      } else {
+        // Last-resort fallback transform animation
+        const idleSpeed = t * 1.6;
+        groupRef.current.position.y = THREE.MathUtils.lerp(
+          groupRef.current.position.y,
+          yOffset + Math.sin(idleSpeed * 2) * 0.05,
+          lerpSpeed
+        );
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(
+          groupRef.current.rotation.y,
+          Math.sin(idleSpeed) * 0.15,
+          lerpSpeed
+        );
+        groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+      }
     }
   });
 
   return (
     <group ref={groupRef} position={[0, yOffset, 0]} scale={scale}>
-      <primitive object={gltf.scene.clone(true)} />
+      {clonedScene && <primitive object={clonedScene} />}
     </group>
   );
 };
@@ -80,6 +289,8 @@ export const StarletModel: React.FC<StarletModelProps> = ({
   customModelUrl,
   customModelScale = 1.0,
   customModelYOffset = -1.4,
+  customModelAnimations,
+  onClipsDiscovered,
   corsetColor = '#151414',
   plumeColor = '#d4af37',
   accentColor = '#5c0f1b',
@@ -157,15 +368,17 @@ export const StarletModel: React.FC<StarletModelProps> = ({
     }),
   }), [corsetColor, plumeColor, accentColor]);
 
-  // If a custom 3D model URL is provided, render the GLTF model
+  // If a custom 3D model URL is provided, render the animated GLTF model
   if (customModelUrl && customModelUrl.trim().length > 0) {
     return (
       <Suspense fallback={null}>
-        <CustomGLTFPrimitive
+        <AnimatedGLTFPerformer
           url={customModelUrl}
           scale={customModelScale}
           yOffset={customModelYOffset}
           action={action}
+          customModelAnimations={customModelAnimations}
+          onClipsDiscovered={onClipsDiscovered}
         />
       </Suspense>
     );

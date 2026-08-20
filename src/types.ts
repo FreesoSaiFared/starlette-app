@@ -42,9 +42,16 @@ export interface DancerCandidate {
   customModelUrl?: string; // 3D GLTF / GLB model converted or imported
   customModelScale?: number;
   customModelYOffset?: number;
+  customModelAnimations?: {
+    idle?: string;
+    dance?: string;
+    bow?: string;
+  };
   corsetColor?: string;
   plumeColor?: string;
   accentColor?: string;
+  relationshipStatus: 'professional' | 'confidant' | 'rivalry' | 'romance';
+  intimacyLevel: number;
   hired: boolean;
   assignedToStage: boolean;
 }

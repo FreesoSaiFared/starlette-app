@@ -156,8 +156,12 @@ export const TroupeScreen: React.FC<TroupeScreenProps> = ({
                       <span className="font-mono text-emerald-400">+{dancer.bonusTps} / sec</span>
                     </div>
                     <div className="flex justify-between items-center text-white/70">
+                      <span className="text-[10px] uppercase tracking-wider text-white/40">Relationship</span>
+                      <span className="text-white/80 capitalize">{dancer.relationshipStatus} ({dancer.intimacyLevel || 0}/100)</span>
+                    </div>
+                    <div className="flex justify-between items-center text-white/70">
                       <span className="text-[10px] uppercase tracking-wider text-white/40">Voice Type</span>
-                      <span className="text-white/80">{dancer.voiceName} (Parisian)</span>
+                      <span className="text-white/80">{dancer.voiceName}</span>
                     </div>
                   </div>
                 </div>

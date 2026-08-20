@@ -122,7 +122,10 @@ export default function App() {
       const wardrobeBonus = currentWardrobe.filter((w) => w.owned).length * 4;
       const dancersBonus = currentDancers
         .filter((d) => d.hired && d.assignedToStage)
-        .reduce((sum, d) => sum + d.bonusTps, 0);
+        .reduce((sum, d) => {
+          const intimacyMultiplier = 1 + (d.intimacyLevel || 0) / 100;
+          return sum + Math.round(d.bonusTps * intimacyMultiplier);
+        }, 0);
       return baseTps + wardrobeBonus + dancersBonus;
     },
     []

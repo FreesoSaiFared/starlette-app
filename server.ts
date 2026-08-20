@@ -127,6 +127,8 @@ Character Profile:
 - Personality: ${candidate.personality}
 - Voice style & Intonation: ${candidate.voiceStyle}
 - Specialty: ${candidate.specialty}
+- Relationship Status: ${candidate.relationshipStatus || 'professional'}
+- Intimacy Level (0-100): ${candidate.intimacyLevel || 0}
 - Storyline & Setting Directives: ${customStoryline}
 
 You are in a private audition room talking with the Director.

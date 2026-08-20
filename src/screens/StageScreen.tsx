@@ -110,6 +110,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
                   customModelUrl={currentPerformer?.customModelUrl}
                   customModelScale={currentPerformer?.customModelScale}
                   customModelYOffset={currentPerformer?.customModelYOffset}
+                  customModelAnimations={currentPerformer?.customModelAnimations}
                   corsetColor={currentPerformer?.corsetColor}
                   plumeColor={currentPerformer?.plumeColor}
                   accentColor={currentPerformer?.accentColor}

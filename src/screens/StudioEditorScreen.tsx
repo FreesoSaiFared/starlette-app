@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, Component, ErrorInfo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
@@ -29,6 +29,32 @@ import {
 import { DancerCandidate, LLMConfig } from '../types';
 import { StarletModel } from '../components/StarletModel';
 import { playChime, playPCM24kAudio } from '../utils/audio';
+
+class CanvasErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Studio Editor 3D Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-[#050505] text-[#d4af37] p-4 text-center">
+          <p className="font-serif italic text-sm">3D preview model preparing behind velvet curtain...</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface StudioEditorScreenProps {
   dancers: DancerCandidate[];
@@ -97,6 +123,7 @@ export const StudioEditorScreen: React.FC<StudioEditorScreenProps> = ({
   const [selectedId, setSelectedId] = useState<string>(dancers[0]?.id || 'colette');
   const [activeTab, setActiveTab] = useState<StudioTab>('voice');
   const [previewAction, setPreviewAction] = useState<'idle' | 'dance' | 'bow'>('idle');
+  const [discoveredClips, setDiscoveredClips] = useState<string[]>([]);
 
   // Voice Test state
   const [testText, setTestText] = useState<string>(
@@ -125,34 +152,36 @@ export const StudioEditorScreen: React.FC<StudioEditorScreenProps> = ({
     const newId = 'starlet_' + Date.now();
     const newStarlet: DancerCandidate = {
       id: newId,
-      name: 'Amélie Devereaux',
-      stageName: 'La Rose Dorée',
-      title: 'Custom Burlesque Starlet',
-      bio: 'A newly drafted sensation trained in the secret cabarets of Pigalle, ready to mesmerize Paris.',
-      specialty: 'Seductive Silk Fan & Champagne Tap',
+      name: 'Jessica Reynolds',
+      stageName: 'Jessica Reynolds',
+      title: 'Aspiring Lead Actor',
+      bio: 'A rising star who recently broke out in the indie film scene, looking for her first major studio role.',
+      specialty: 'Raw Authenticity & Improvisation',
       hiringPrice: 3000,
       bonusTps: 30,
       happinessBonus: 25,
       image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
       portrait: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
       voiceName: 'Kore',
-      voiceStyle: 'Seductive French burlesque starlet with delicate vocal fry, melodic lilt, and dramatic pauses',
+      voiceStyle: 'Grounded, modern, naturalistic with occasional slight vocal fry',
       intonationPitch: 1.0,
       intonationSpeed: 1.0,
-      personality: 'Enigmatic, fiercely creative, fond of vintage champagne, witty and flirtatious.',
-      greeting: 'Bonjour, mon cher Directeur. Are you prepared to witness true Parisian enchantment?',
+      personality: 'Eager, creative, professional but highly opinionated on script authenticity.',
+      greeting: "Hi. Thanks for having me in. I loved the sides, but I had some questions about my character's motivation in scene 4.",
       corsetColor: '#2b102f',
       plumeColor: '#d4af37',
       accentColor: '#5c0f1b',
       customModelScale: 1.0,
       customModelYOffset: -1.4,
+      relationshipStatus: 'professional',
+      intimacyLevel: 0,
       hired: false,
       assignedToStage: false,
     };
     onCreateDancer(newStarlet);
     setSelectedId(newId);
     playChime(659.25, 'triangle', 0.25);
-    showBanner('New Starlet persona created!');
+    showBanner('New Actor persona created!');
   };
 
   const showBanner = (msg: string) => {
@@ -654,6 +683,37 @@ export const StudioEditorScreen: React.FC<StudioEditorScreenProps> = ({
                 />
               </div>
 
+              {/* Relationship Status & Intimacy */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-serif text-white/70">Relationship Status</label>
+                  <select
+                    value={currentDancer.relationshipStatus || 'professional'}
+                    onChange={(e) => handleFieldChange('relationshipStatus', e.target.value)}
+                    className="w-full bg-[#141210] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-[#d4af37] focus:outline-none"
+                  >
+                    <option value="professional">Professional</option>
+                    <option value="confidant">Confidant</option>
+                    <option value="rivalry">Rivalry</option>
+                    <option value="romance">Romance</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-serif text-white/70">
+                    Intimacy Level (0-100): {currentDancer.intimacyLevel || 0}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={currentDancer.intimacyLevel || 0}
+                    onChange={(e) => handleFieldChange('intimacyLevel', parseInt(e.target.value, 10))}
+                    className="w-full accent-[#d4af37] bg-white/10 rounded-lg h-1.5 cursor-pointer mt-2"
+                  />
+                </div>
+              </div>
+
               {/* Stats Multipliers */}
               <div className="grid grid-cols-3 gap-3 pt-2">
                 <div className="bg-[#141210] border border-white/10 p-3 rounded-xl">
@@ -760,6 +820,136 @@ export const StudioEditorScreen: React.FC<StudioEditorScreenProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Animation Clip Mapping for Custom GLTF/GLB */}
+              {currentDancer.customModelUrl && (
+                <div className="bg-[#141210] border border-white/10 rounded-xl p-4 space-y-4">
+                  <div>
+                    <h4 className="text-xs font-serif text-white font-medium flex items-center gap-1.5">
+                      <Play size={13} className="text-[#d4af37]" /> Skeletal Animation Clip Mapping
+                    </h4>
+                    <p className="text-[10px] text-white/40 mt-0.5">
+                      Map embedded GLB clips to stage actions. Leave blank for smart automatic detection.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-serif text-white/70 uppercase tracking-wider">
+                        Idle Clip Name
+                      </label>
+                      <input
+                        type="text"
+                        value={currentDancer.customModelAnimations?.idle || ''}
+                        onChange={(e) =>
+                          handleFieldChange('customModelAnimations', {
+                            ...(currentDancer.customModelAnimations || {}),
+                            idle: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. Idle, Stand, Breathe"
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/20 focus:border-[#d4af37] focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-serif text-white/70 uppercase tracking-wider">
+                        Dance Routine Clip Name
+                      </label>
+                      <input
+                        type="text"
+                        value={currentDancer.customModelAnimations?.dance || ''}
+                        onChange={(e) =>
+                          handleFieldChange('customModelAnimations', {
+                            ...(currentDancer.customModelAnimations || {}),
+                            dance: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. Dance, Cancan, Choreo"
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/20 focus:border-[#d4af37] focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-serif text-white/70 uppercase tracking-wider">
+                        Encore Bow Clip Name
+                      </label>
+                      <input
+                        type="text"
+                        value={currentDancer.customModelAnimations?.bow || ''}
+                        onChange={(e) =>
+                          handleFieldChange('customModelAnimations', {
+                            ...(currentDancer.customModelAnimations || {}),
+                            bow: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. Bow, Curtsy, Curtsey"
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-white/20 focus:border-[#d4af37] focus:outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Discovered Clips Inspector */}
+                  {discoveredClips.length > 0 && (
+                    <div className="pt-2 border-t border-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-white/60">
+                          Detected in GLB ({discoveredClips.length} clip{discoveredClips.length > 1 ? 's' : ''}):
+                        </span>
+                        <span className="text-[#d4af37] font-mono">Hover to assign</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                        {discoveredClips.map((clipName) => (
+                          <div
+                            key={clipName}
+                            className="group flex items-center bg-white/5 border border-white/10 rounded-md px-2 py-1 text-[11px] font-mono text-white/80 hover:border-[#d4af37]/60 transition-all"
+                          >
+                            <span className="truncate max-w-[130px]">{clipName}</span>
+                            <div className="hidden group-hover:flex items-center gap-1 ml-2 pl-1 border-l border-white/10">
+                              <button
+                                onClick={() =>
+                                  handleFieldChange('customModelAnimations', {
+                                    ...(currentDancer.customModelAnimations || {}),
+                                    idle: clipName,
+                                  })
+                                }
+                                title="Set as Idle clip"
+                                className="px-1.5 py-0.5 rounded bg-black/50 text-[9px] text-[#d4af37] hover:bg-[#d4af37] hover:text-black font-sans"
+                              >
+                                Idle
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleFieldChange('customModelAnimations', {
+                                    ...(currentDancer.customModelAnimations || {}),
+                                    dance: clipName,
+                                  })
+                                }
+                                title="Set as Dance clip"
+                                className="px-1.5 py-0.5 rounded bg-black/50 text-[9px] text-[#d4af37] hover:bg-[#d4af37] hover:text-black font-sans"
+                              >
+                                Dance
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleFieldChange('customModelAnimations', {
+                                    ...(currentDancer.customModelAnimations || {}),
+                                    bow: clipName,
+                                  })
+                                }
+                                title="Set as Bow clip"
+                                className="px-1.5 py-0.5 rounded bg-black/50 text-[9px] text-[#d4af37] hover:bg-[#d4af37] hover:text-black font-sans"
+                              >
+                                Bow
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Procedural Aesthetic Colors */}
               <div className="space-y-4 pt-2">
@@ -998,33 +1188,37 @@ export const StudioEditorScreen: React.FC<StudioEditorScreenProps> = ({
 
             {/* 3D Model Stage Canvas */}
             <div className="w-full h-80 bg-[#050505] rounded-xl border border-white/10 relative overflow-hidden">
-              <Canvas camera={{ position: [0, 0.4, 5.2], fov: 42 }}>
-                <ambientLight intensity={0.7} color="#fff6e8" />
-                <spotLight position={[0, 6, 4]} angle={0.45} penumbra={0.8} intensity={3.5} color="#f7e1a0" />
-                <directionalLight position={[4, 3, -3]} intensity={1.8} color="#d4af37" />
-                <directionalLight position={[-4, 3, -3]} intensity={1.2} color="#6b121c" />
-                <pointLight position={[0, -1.8, 2.5]} intensity={1.0} color="#ffeedb" />
+              <CanvasErrorBoundary>
+                <Canvas camera={{ position: [0, 0.4, 5.2], fov: 42 }}>
+                  <ambientLight intensity={0.7} color="#fff6e8" />
+                  <spotLight position={[0, 6, 4]} angle={0.45} penumbra={0.8} intensity={3.5} color="#f7e1a0" />
+                  <directionalLight position={[4, 3, -3]} intensity={1.8} color="#d4af37" />
+                  <directionalLight position={[-4, 3, -3]} intensity={1.2} color="#6b121c" />
+                  <pointLight position={[0, -1.8, 2.5]} intensity={1.0} color="#ffeedb" />
 
-                <Suspense fallback={null}>
-                  <StarletModel
-                    action={previewAction}
-                    customModelUrl={currentDancer.customModelUrl}
-                    customModelScale={currentDancer.customModelScale}
-                    customModelYOffset={currentDancer.customModelYOffset}
-                    corsetColor={currentDancer.corsetColor}
-                    plumeColor={currentDancer.plumeColor}
-                    accentColor={currentDancer.accentColor}
+                  <Suspense fallback={null}>
+                    <StarletModel
+                      action={previewAction}
+                      customModelUrl={currentDancer.customModelUrl}
+                      customModelScale={currentDancer.customModelScale}
+                      customModelYOffset={currentDancer.customModelYOffset}
+                      customModelAnimations={currentDancer.customModelAnimations}
+                      onClipsDiscovered={setDiscoveredClips}
+                      corsetColor={currentDancer.corsetColor}
+                      plumeColor={currentDancer.plumeColor}
+                      accentColor={currentDancer.accentColor}
+                    />
+                    <ContactShadows position={[0, -1.4, 0]} opacity={0.75} scale={8} blur={2.0} far={3.0} />
+                  </Suspense>
+
+                  <OrbitControls
+                    enableZoom={true}
+                    enablePan={false}
+                    maxPolarAngle={Math.PI / 2 + 0.05}
+                    minPolarAngle={Math.PI / 2 - 0.25}
                   />
-                  <ContactShadows position={[0, -1.4, 0]} opacity={0.75} scale={8} blur={2.0} far={3.0} />
-                </Suspense>
-
-                <OrbitControls
-                  enableZoom={true}
-                  enablePan={false}
-                  maxPolarAngle={Math.PI / 2 + 0.05}
-                  minPolarAngle={Math.PI / 2 - 0.25}
-                />
-              </Canvas>
+                </Canvas>
+              </CanvasErrorBoundary>
 
               <div className="absolute bottom-2 left-3 text-[9px] text-white/40 font-sans pointer-events-none">
                 Drag to orbit 360° • Scroll to zoom
