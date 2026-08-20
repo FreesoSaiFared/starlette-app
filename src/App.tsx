@@ -1,26 +1,20 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Layout } from './components/Layout';
 import { CinematicScreen } from './screens/CinematicScreen';
 import { StageScreen } from './screens/StageScreen';
+import { AuditionScreen } from './screens/AuditionScreen';
+import { TroupeScreen } from './screens/TroupeScreen';
 import { WardrobeScreen } from './screens/WardrobeScreen';
+import { DemandsScreen } from './screens/DemandsScreen';
 import { CrisisOverlay } from './components/CrisisOverlay';
-import { StarletStats, GameView, WardrobeItem, Crisis } from './types';
+import { StarletStats, GameView, WardrobeItem, Crisis, DancerCandidate } from './types';
+import { INITIAL_DANCERS } from './data/dancers';
 
 const INITIAL_STATS: StarletStats = {
   happiness: 85,
   reaction: 92,
-  tribute: 1492,
-  tributePerSecond: 12,
+  tribute: 3500, // Generous starting funds so the player can immediately test and enjoy hiring a starlet
+  tributePerSecond: 15,
 };
 
 const WARDROBE_ITEMS: WardrobeItem[] = [
@@ -29,7 +23,7 @@ const WARDROBE_ITEMS: WardrobeItem[] = [
     name: 'Diamond Choker',
     description: 'A cascade of brilliance for the most demanding necklines.',
     price: 4500,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuADPncJP5ILEEI3vCFsEm50nl2yLSel2LruIfpZGESxcNU-mAN05jlwUW2UkHSIN7V52O6uv4b9ydewTrbcABc4R4zLS6H5QdUYRUyToozOvKcbsWAzy5S1l-hKL-sKeXs5zMOH_6TWFQokeN-img34HjeS7dZhWbXRXYQWaQu7xHPpHACcG1oBZPExvoExItaugaRQhEWzs4ETENpkACoqOnaXV7M62P08ZmH42JsGnKGKQJHmvEjnFXXqD7R2RMGjcnQZrNfzAlI',
+    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80',
     owned: false,
   },
   {
@@ -37,7 +31,7 @@ const WARDROBE_ITEMS: WardrobeItem[] = [
     name: 'Feathered Headpiece',
     description: 'Towering ostrich plumes to command every eye in the house.',
     price: 2800,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBP6DcA4dlNR8p_wHpImqWtODOAHHHcCE82j8ikLHj5N0tDkNkcAtNKVpiO5_U8zoQO7SssOAnsWFvsa2cBt4RO4UaZkCAEStCpsQFRSxZu7UI6MlGJ2eNPfVD5wH9DNvt801ZvcbBsxvEHueKfwveEq2EcgdB5-U1-WYpNbSO25MXS2L4rAEydY7zOov4z-zH2Ktuqz_E1ffVajnK9bkGNP-QCw1_6Bgqd6tXETnALQuppQsoOMApFo5PvXjfCRioD275iy0qybKw',
+    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
     owned: false,
   },
   {
@@ -45,7 +39,7 @@ const WARDROBE_ITEMS: WardrobeItem[] = [
     name: 'Silk Garters',
     description: 'Hand-stitched lace details for the ultimate private luxury.',
     price: 1200,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCxUxingsrYZevPVQ59HTnQHhL3UOFhlhs2Qq9y2bklIhJ2GoT7SCQA08MaWTyBkBRwEvsH6yf40U2htFjhxslP8EJRDqNO6u1jG6mSBIcke_BESUlsSJrYe9L1503g-C6NnogE05ZyxrA6S4MhrSEzrJ9TtO58QOvRUJB9EgdwiF2-kKSO5wuwUaITnUPlb4yKZMTkNLDgIHSbJFt4J_4XUO9e4F9_4ltbCd_YkALtcFBY5O9Y1gIX2P5fsmBvmy5VcF-uhO338t4',
+    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
     owned: false,
   },
   {
@@ -53,73 +47,103 @@ const WARDROBE_ITEMS: WardrobeItem[] = [
     name: 'Sequined Corset',
     description: 'A structural masterpiece covered in obsidian sequins.',
     price: 6000,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHP_XgMaK4q9At9TGOHzXXBjg-syaZ3CZ4wijdb_7lMosin5UN23173WUV2qFNBCCVGNYK3HXmeEFfuMTD3gJfP3GV_JPd730qEfEVTq-H2MYfTFcrYNJvWoW636P3YzqddC8wGVwzY-2-zV0t7APP-2mWLxYvh4nXO9uNcHDmGBPCujfqc5EHAu5eo0OWXWCA7EiZeDYZRVlhh_cb6kwno8VECRGSl7hVe-zXIXBLGchuQzshHd3nBenTD6RYKFyKqSixf8QXvcY',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80',
     owned: false,
-    setId: 'midnight-revue'
+    setId: 'midnight-revue',
   },
   {
     id: 'revue-gloves',
     name: 'Matching Gloves',
     description: 'Elbow-length silk gloves tailored for dramatic gestures.',
     price: 2000,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCxUxingsrYZevPVQ59HTnQHhL3UOFhlhs2Qq9y2bklIhJ2GoT7SCQA08MaWTyBkBRwEvsH6yf40U2htFjhxslP8EJRDqNO6u1jG6mSBIcke_BESUlsSJrYe9L1503g-C6NnogE05ZyxrA6S4MhrSEzrJ9TtO58QOvRUJB9EgdwiF2-kKSO5wuwUaITnUPlb4yKZMTkNLDgIHSbJFt4J_4XUO9e4F9_4ltbCd_YkALtcFBY5O9Y1gIX2P5fsmBvmy5VcF-uhO338t4',
+    image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
     owned: false,
-    setId: 'midnight-revue'
+    setId: 'midnight-revue',
   },
   {
     id: 'revue-cane',
     name: 'Signature Cane',
     description: 'A polished ebony cane with a solid gold handle.',
     price: 4000,
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuADPncJP5ILEEI3vCFsEm50nl2yLSel2LruIfpZGESxcNU-mAN05jlwUW2UkHSIN7V52O6uv4b9ydewTrbcABc4R4zLS6H5QdUYRUyToozOvKcbsWAzy5S1l-hKL-sKeXs5zMOH_6TWFQokeN-img34HjeS7dZhWbXRXYQWaQu7xHPpHACcG1oBZPExvoExItaugaRQhEWzs4ETENpkACoqOnaXV7M62P08ZmH42JsGnKGKQJHmvEjnFXXqD7R2RMGjcnQZrNfzAlI',
+    image: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80',
     owned: false,
-    setId: 'midnight-revue'
-  }
+    setId: 'midnight-revue',
+  },
 ];
 
 export default function App() {
   const [stats, setStats] = useState<StarletStats>(INITIAL_STATS);
   const [view, setView] = useState<GameView>('cinematic');
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>(WARDROBE_ITEMS);
+  const [dancers, setDancers] = useState<DancerCandidate[]>(INITIAL_DANCERS);
   const [activeCrisis, setActiveCrisis] = useState<Crisis | null>(null);
+
+  // Recalculate tribute per second based on wardrobe and hired stage dancers
+  const calculateTps = useCallback(
+    (currentWardrobe: WardrobeItem[], currentDancers: DancerCandidate[]) => {
+      const baseTps = 15;
+      const wardrobeBonus = currentWardrobe.filter((w) => w.owned).length * 4;
+      const dancersBonus = currentDancers
+        .filter((d) => d.hired && d.assignedToStage)
+        .reduce((sum, d) => sum + d.bonusTps, 0);
+      return baseTps + wardrobeBonus + dancersBonus;
+    },
+    []
+  );
 
   // Auto-generation of tribute
   useEffect(() => {
     const timer = setInterval(() => {
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         tribute: prev.tribute + prev.tributePerSecond,
-        // Stats decay over time
-        happiness: Math.max(0, prev.happiness - 0.05),
-        reaction: Math.max(0, prev.reaction - 0.1),
+        happiness: Math.max(10, prev.happiness - 0.04),
+        reaction: Math.max(20, prev.reaction - 0.08),
       }));
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Random crisis generator
+  // Update TPS when wardrobe or dancers change
+  useEffect(() => {
+    const newTps = calculateTps(wardrobe, dancers);
+    setStats((prev) => ({
+      ...prev,
+      tributePerSecond: newTps,
+    }));
+  }, [wardrobe, dancers, calculateTps]);
+
+  // Random crisis generator (less frequent if dancers like Mireille are hired)
   useEffect(() => {
     const crisisTimer = setInterval(() => {
-      if (!activeCrisis && Math.random() < 0.05) { // 5% chance every 15s
+      const hasMireille = dancers.some((d) => d.id === 'mireille' && d.hired);
+      const threshold = hasMireille ? 0.02 : 0.04;
+      if (!activeCrisis && Math.random() < threshold) {
         triggerCrisis();
       }
-    }, 15000);
+    }, 18000);
     return () => clearInterval(crisisTimer);
-  }, [activeCrisis]);
+  }, [activeCrisis, dancers]);
 
   const triggerCrisis = useCallback(() => {
     const crises: Crisis[] = [
       {
         id: 'orchestra',
-        message: 'Mon petit agent, the orchestra is incompetent! Fix this travesty immediately!',
+        message: 'Mon cher Directeur, the orchestra strings are wildly off-tempo! Restore Parisian elegance at once!',
         level: 'MEDIUM',
         type: 'drama',
       },
       {
         id: 'spotlight',
-        message: 'IDIOT! The spotlight is blinding me! FIX IT IMMEDIATELY OR I QUIT!',
+        message: 'MON DIEU! The main spotlight operator is asleep! Recalibrate the stage lighting immediately!',
         level: 'CRITICAL',
         type: 'crisis',
+      },
+      {
+        id: 'champagne',
+        message: 'The backstage ice bucket is empty! The prima donna refuses to take the stage without chilled vintage Moët!',
+        level: 'LOW',
+        type: 'drama',
       },
     ];
     setActiveCrisis(crises[Math.floor(Math.random() * crises.length)]);
@@ -127,50 +151,79 @@ export default function App() {
 
   const handleAction = (type: 'encourage' | 'applaud') => {
     if (type === 'encourage') {
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
-        happiness: Math.min(100, prev.happiness + 5),
+        happiness: Math.min(100, prev.happiness + 6),
       }));
     } else {
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
-        reaction: Math.min(100, prev.reaction + 5),
-        tribute: prev.tribute + 50,
+        reaction: Math.min(100, prev.reaction + 6),
+        tribute: prev.tribute + 60,
       }));
     }
   };
 
+  const handleHireDancer = (candidateToHire: DancerCandidate) => {
+    if (stats.tribute < candidateToHire.hiringPrice) return;
+
+    setDancers((prev) =>
+      prev.map((d) =>
+        d.id === candidateToHire.id ? { ...d, hired: true, assignedToStage: true } : d
+      )
+    );
+
+    setStats((prev) => ({
+      ...prev,
+      tribute: prev.tribute - candidateToHire.hiringPrice,
+      happiness: Math.min(100, prev.happiness + candidateToHire.happinessBonus),
+    }));
+  };
+
+  const handleToggleStageAssignment = (id: string) => {
+    setDancers((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, assignedToStage: !d.assignedToStage } : d))
+    );
+  };
+
+  const handleRehearseTroupe = () => {
+    setStats((prev) => ({
+      ...prev,
+      happiness: 100,
+      reaction: Math.min(100, prev.reaction + 15),
+      tribute: prev.tribute + 200,
+    }));
+  };
+
   const handlePurchase = (id: string) => {
-    const item = wardrobe.find(i => i.id === id);
+    const item = wardrobe.find((i) => i.id === id);
     if (item && stats.tribute >= item.price && !item.owned) {
-      setWardrobe(prev => prev.map(i => i.id === id ? { ...i, owned: true } : i));
-      setStats(prev => ({
+      setWardrobe((prev) => prev.map((i) => (i.id === id ? { ...i, owned: true } : i)));
+      setStats((prev) => ({
         ...prev,
         tribute: prev.tribute - item.price,
-        tributePerSecond: prev.tributePerSecond + 2,
         happiness: Math.min(100, prev.happiness + 10),
       }));
     }
   };
 
   const handlePurchaseSet = (setId: string) => {
-    const setItems = wardrobe.filter(i => i.setId === setId && !i.owned);
+    const setItems = wardrobe.filter((i) => i.setId === setId && !i.owned);
     const totalPrice = setItems.reduce((sum, item) => sum + item.price, 0);
 
     if (setItems.length > 0 && stats.tribute >= totalPrice) {
-      setWardrobe(prev => prev.map(i => i.setId === setId ? { ...i, owned: true } : i));
-      setStats(prev => ({
+      setWardrobe((prev) => prev.map((i) => (i.setId === setId ? { ...i, owned: true } : i)));
+      setStats((prev) => ({
         ...prev,
         tribute: prev.tribute - totalPrice,
-        tributePerSecond: prev.tributePerSecond + (setItems.length * 2),
-        happiness: Math.min(100, prev.happiness + (setItems.length * 10)),
+        happiness: Math.min(100, prev.happiness + setItems.length * 10),
       }));
     }
   };
 
   const solveCrisis = (id: string) => {
-    if (stats.tribute >= 500) {
-      setStats(prev => ({ ...prev, tribute: prev.tribute - 500, happiness: 100 }));
+    if (stats.tribute >= 300) {
+      setStats((prev) => ({ ...prev, tribute: prev.tribute - 300, happiness: 100 }));
       setActiveCrisis(null);
     }
   };
@@ -180,40 +233,56 @@ export default function App() {
       {view === 'cinematic' ? (
         <CinematicScreen onSkip={() => setView('stage')} />
       ) : (
-        <Layout activeView={view} onViewChange={setView}>
+        <Layout activeView={view} onViewChange={setView} tribute={stats.tribute}>
           {view === 'stage' && (
-            <StageScreen stats={stats} onAction={handleAction} />
+            <StageScreen
+              stats={stats}
+              hiredDancers={dancers}
+              onAction={handleAction}
+              onGoToAuditions={() => setView('auditions')}
+            />
           )}
+
+          {view === 'auditions' && (
+            <AuditionScreen
+              candidates={dancers}
+              tribute={stats.tribute}
+              onHireDancer={handleHireDancer}
+            />
+          )}
+
+          {view === 'troupe' && (
+            <TroupeScreen
+              dancers={dancers}
+              tribute={stats.tribute}
+              onToggleStageAssignment={handleToggleStageAssignment}
+              onGoToAuditions={() => setView('auditions')}
+              onRehearseTroupe={handleRehearseTroupe}
+            />
+          )}
+
           {view === 'wardrobe' && (
-            <WardrobeScreen 
-              items={wardrobe} 
-              tribute={stats.tribute} 
-              onPurchase={handlePurchase} 
+            <WardrobeScreen
+              items={wardrobe}
+              tribute={stats.tribute}
+              onPurchase={handlePurchase}
               onPurchaseSet={handlePurchaseSet}
             />
           )}
-          {/* Placeholders for other views */}
+
           {(view === 'demands' || view === 'gifts' || view === 'mirror') && (
-            <div className="flex flex-col items-center justify-center pt-20 p-8 text-center gap-4">
-              <h1 className="font-newsreader text-4xl text-secondary italic">Coming Soon</h1>
-              <p className="font-serif text-on-surface-variant italic">
-                The Starlet's whims for this section are still being drafted...
-              </p>
-              <button 
-                onClick={() => setView('stage')}
-                className="mt-4 px-8 py-3 bg-primary-container text-white rounded-full font-serif uppercase tracking-widest text-xs"
-              >
-                Return to Stage
-              </button>
-            </div>
+            <DemandsScreen
+              onReturnToStage={() => setView('stage')}
+              onGoToAuditions={() => setView('auditions')}
+            />
           )}
         </Layout>
       )}
 
-      <CrisisOverlay 
-        crisis={activeCrisis} 
-        onSolve={solveCrisis} 
-        onClose={() => setActiveCrisis(null)} 
+      <CrisisOverlay
+        crisis={activeCrisis}
+        onSolve={solveCrisis}
+        onClose={() => setActiveCrisis(null)}
       />
     </div>
   );

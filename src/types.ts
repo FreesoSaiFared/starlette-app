@@ -20,7 +20,37 @@ export interface WardrobeItem {
   setId?: string;
 }
 
-export type GameView = 'cinematic' | 'stage' | 'demands' | 'gifts' | 'mirror' | 'wardrobe';
+export interface DancerCandidate {
+  id: string;
+  name: string;
+  stageName: string;
+  title: string;
+  bio: string;
+  specialty: string;
+  hiringPrice: number;
+  bonusTps: number;
+  happinessBonus: number;
+  image: string;
+  portrait: string;
+  voiceName: 'Kore' | 'Puck' | 'Zephyr' | 'Fenrir' | 'Charon';
+  voiceStyle: string;
+  personality: string;
+  greeting: string;
+  hired: boolean;
+  assignedToStage: boolean;
+}
+
+export interface AuditionDialogueMessage {
+  id: string;
+  speaker: 'director' | 'candidate' | 'narrator';
+  text: string;
+  emotion?: 'neutral' | 'flirty' | 'amused' | 'dramatic' | 'impressed' | 'thoughtful';
+  stageDirection?: string;
+  audioBase64?: string;
+  timestamp: number;
+}
+
+export type GameView = 'cinematic' | 'stage' | 'auditions' | 'troupe' | 'wardrobe' | 'mirror' | 'demands' | 'gifts';
 
 export interface Crisis {
   id: string;
@@ -29,3 +59,4 @@ export interface Crisis {
   type: 'drama' | 'crisis';
   image?: string;
 }
+
