@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Users, Sparkles, Flame, Heart, Award, ArrowRight, Music, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Users, Sparkles, Flame, Heart, Award, ArrowRight, Music, CheckCircle, ShieldCheck, Sliders } from 'lucide-react';
 import { DancerCandidate } from '../types';
 import { playChime } from '../utils/audio';
 
@@ -10,6 +10,7 @@ interface TroupeScreenProps {
   onToggleStageAssignment: (id: string) => void;
   onGoToAuditions: () => void;
   onRehearseTroupe: () => void;
+  onOpenStudio?: () => void;
 }
 
 export const TroupeScreen: React.FC<TroupeScreenProps> = ({
@@ -18,6 +19,7 @@ export const TroupeScreen: React.FC<TroupeScreenProps> = ({
   onToggleStageAssignment,
   onGoToAuditions,
   onRehearseTroupe,
+  onOpenStudio,
 }) => {
   const hiredDancers = dancers.filter((d) => d.hired);
   const totalTroupeTps = hiredDancers
@@ -41,6 +43,15 @@ export const TroupeScreen: React.FC<TroupeScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          {onOpenStudio && (
+            <button
+              onClick={onOpenStudio}
+              className="px-3.5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/20 rounded-xl text-xs uppercase font-serif tracking-widest text-[#d4af37] flex items-center gap-2 transition-all"
+            >
+              <Sliders size={15} /> Persona & 3D Studio
+            </button>
+          )}
+
           <button
             onClick={() => {
               playChime(659.25, 'triangle', 0.3);

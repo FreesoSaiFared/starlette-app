@@ -10,6 +10,7 @@ import { playChime } from '../utils/audio';
 interface StageScreenProps {
   stats: StarletStats;
   hiredDancers?: DancerCandidate[];
+  leadDancer?: DancerCandidate;
   onAction: (type: 'encourage' | 'applaud') => void;
   onGoToAuditions?: () => void;
 }
@@ -43,6 +44,7 @@ class CanvasErrorBoundary extends Component<{ children: ReactNode }, { hasError:
 export const StageScreen: React.FC<StageScreenProps> = ({
   stats,
   hiredDancers = [],
+  leadDancer,
   onAction,
   onGoToAuditions,
 }) => {
@@ -50,6 +52,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const activeStageDancers = hiredDancers.filter((d) => d.assignedToStage);
+  const currentPerformer = leadDancer || activeStageDancers[0];
 
   const handleAction = (type: 'encourage' | 'applaud') => {
     onAction(type);
@@ -102,7 +105,15 @@ export const StageScreen: React.FC<StageScreenProps> = ({
               <pointLight position={[0, -1.8, 2.5]} intensity={1.0} color="#ffeedb" />
 
               <Suspense fallback={null}>
-                <StarletModel action={modelAction} />
+                <StarletModel
+                  action={modelAction}
+                  customModelUrl={currentPerformer?.customModelUrl}
+                  customModelScale={currentPerformer?.customModelScale}
+                  customModelYOffset={currentPerformer?.customModelYOffset}
+                  corsetColor={currentPerformer?.corsetColor}
+                  plumeColor={currentPerformer?.plumeColor}
+                  accentColor={currentPerformer?.accentColor}
+                />
                 <ContactShadows position={[0, -1.4, 0]} opacity={0.75} scale={8} blur={2.0} far={3.0} />
               </Suspense>
 

@@ -1,12 +1,89 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface StarletModelProps {
   action: 'idle' | 'dance' | 'bow';
+  customModelUrl?: string;
+  customModelScale?: number;
+  customModelYOffset?: number;
+  corsetColor?: string;
+  plumeColor?: string;
+  accentColor?: string;
 }
 
-export const StarletModel: React.FC<StarletModelProps> = ({ action }) => {
+// Sub-component to load external GLTF/GLB converted models (e.g. from chatgpt-56-sol conversion)
+const CustomGLTFPrimitive: React.FC<{
+  url: string;
+  scale?: number;
+  yOffset?: number;
+  action: 'idle' | 'dance' | 'bow';
+}> = ({ url, scale = 1.0, yOffset = -1.4, action }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const gltf = useGLTF(url);
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return;
+    const t = state.clock.getElapsedTime();
+    const lerpSpeed = Math.min(1, delta * 6);
+
+    if (action === 'dance') {
+      const danceTempo = t * 6;
+      groupRef.current.position.y = THREE.MathUtils.lerp(
+        groupRef.current.position.y,
+        yOffset + Math.abs(Math.sin(danceTempo * 2)) * 0.25,
+        lerpSpeed
+      );
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(
+        groupRef.current.rotation.y,
+        Math.sin(danceTempo) * 0.4,
+        lerpSpeed
+      );
+    } else if (action === 'bow') {
+      const bowPhase = Math.sin(t * 2);
+      groupRef.current.position.y = THREE.MathUtils.lerp(
+        groupRef.current.position.y,
+        yOffset - Math.max(0, bowPhase) * 0.3,
+        lerpSpeed
+      );
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x,
+        0.3 + Math.max(0, bowPhase) * 0.3,
+        lerpSpeed
+      );
+    } else {
+      const idleSpeed = t * 1.6;
+      groupRef.current.position.y = THREE.MathUtils.lerp(
+        groupRef.current.position.y,
+        yOffset + Math.sin(idleSpeed * 2) * 0.05,
+        lerpSpeed
+      );
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(
+        groupRef.current.rotation.y,
+        Math.sin(idleSpeed) * 0.15,
+        lerpSpeed
+      );
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, lerpSpeed);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, yOffset, 0]} scale={scale}>
+      <primitive object={gltf.scene.clone(true)} />
+    </group>
+  );
+};
+
+export const StarletModel: React.FC<StarletModelProps> = ({
+  action,
+  customModelUrl,
+  customModelScale = 1.0,
+  customModelYOffset = -1.4,
+  corsetColor = '#151414',
+  plumeColor = '#d4af37',
+  accentColor = '#5c0f1b',
+}) => {
   const rootRef = useRef<THREE.Group>(null);
   const hipsRef = useRef<THREE.Group>(null);
   const torsoRef = useRef<THREE.Group>(null);
@@ -33,7 +110,7 @@ export const StarletModel: React.FC<StarletModelProps> = ({ action }) => {
 
   const particlesRef = useRef<THREE.Points>(null);
 
-  // Materials with the Sophisticated Dark aesthetic
+  // Materials with customizable colors & Sophisticated Dark aesthetic
   const materials = useMemo(() => ({
     gold: new THREE.MeshStandardMaterial({
       color: '#d4af37',
@@ -48,12 +125,12 @@ export const StarletModel: React.FC<StarletModelProps> = ({ action }) => {
       emissiveIntensity: 0.2,
     }),
     velvet: new THREE.MeshStandardMaterial({
-      color: '#151414',
+      color: corsetColor || '#151414',
       roughness: 0.85,
       metalness: 0.1,
     }),
     crimson: new THREE.MeshStandardMaterial({
-      color: '#5c0f1b',
+      color: accentColor || '#5c0f1b',
       roughness: 0.6,
       metalness: 0.2,
     }),
@@ -67,7 +144,7 @@ export const StarletModel: React.FC<StarletModelProps> = ({ action }) => {
       roughness: 0.9,
     }),
     plume: new THREE.MeshStandardMaterial({
-      color: '#d4af37',
+      color: plumeColor || '#d4af37',
       roughness: 0.4,
       metalness: 0.4,
       side: THREE.DoubleSide,
@@ -78,7 +155,21 @@ export const StarletModel: React.FC<StarletModelProps> = ({ action }) => {
       roughness: 0.1,
       emissive: '#400000',
     }),
-  }), []);
+  }), [corsetColor, plumeColor, accentColor]);
+
+  // If a custom 3D model URL is provided, render the GLTF model
+  if (customModelUrl && customModelUrl.trim().length > 0) {
+    return (
+      <Suspense fallback={null}>
+        <CustomGLTFPrimitive
+          url={customModelUrl}
+          scale={customModelScale}
+          yOffset={customModelYOffset}
+          action={action}
+        />
+      </Suspense>
+    );
+  }
 
   // Sparkle particles for stage performance
   const particleCount = 40;

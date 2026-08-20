@@ -37,19 +37,98 @@ function getAI(): GoogleGenAI {
 // REST Endpoints for Burlesque Audition Visual Novel & Voice
 // ----------------------------------------------------
 
-// 1. Audition Chat with Personality & Dynamic Branch Generation
+// Helper to call OpenAI-compatible API
+async function callOpenAICompatible(
+  endpoint: string,
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+  temperature = 0.7
+) {
+  const url = endpoint.endsWith('/chat/completions')
+    ? endpoint
+    : endpoint.replace(/\/+$/, '') + '/chat/completions';
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  const payload = {
+    model: model || 'gpt-4o-mini',
+    temperature: temperature || 0.7,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OpenAI API error (${response.status}): ${errText}`);
+  }
+
+  const json: any = await response.json();
+  const rawContent = json.choices?.[0]?.message?.content || '{}';
+  return JSON.parse(rawContent);
+}
+
+// 0. Test LLM Connection (for OpenAI-compatible or Gemini)
+app.post('/api/llm/test-connection', async (req, res) => {
+  try {
+    const { provider, endpoint, apiKey, model } = req.body;
+    if (provider === 'openai-compatible') {
+      if (!endpoint) {
+        return res.status(400).json({ success: false, error: 'Endpoint URL is required' });
+      }
+      const testResult = await callOpenAICompatible(
+        endpoint,
+        apiKey,
+        model,
+        'You are a testing assistant. Return a JSON object with {"status": "ok", "message": "Connected successfully"}',
+        'Ping',
+        0.5
+      );
+      return res.json({ success: true, message: testResult.message || 'Connected to external LLM!' });
+    } else {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: 'Ping test. Reply with: Gemini Connected.',
+      });
+      return res.json({ success: true, message: response.text || 'Gemini Connected.' });
+    }
+  } catch (err: any) {
+    console.error('LLM Test Connection error:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Connection failed' });
+  }
+});
+
+// 1. Audition Chat with Personality, Dynamic Storyline & Voice Routing
 app.post('/api/audition/chat', async (req, res) => {
   try {
-    const { candidate, history, userMessage } = req.body;
-    const ai = getAI();
+    const { candidate, history, userMessage, llmConfig } = req.body;
+
+    const customStoryline = candidate.customStorylinePrompt || llmConfig?.customStorylinePrompt || '';
 
     const systemPrompt = `You are playing ${candidate.name} ("${candidate.stageName}"), a prospective burlesque dancer auditioning to join a high-class Parisian Cabaret ("The Aurelian Starlet").
 Character Profile:
 - Title: ${candidate.title}
 - Background: ${candidate.bio}
 - Personality: ${candidate.personality}
-- Voice style: ${candidate.voiceStyle}
+- Voice style & Intonation: ${candidate.voiceStyle}
 - Specialty: ${candidate.specialty}
+${customStoryline ? `- Cabaret Storyline & Setting Directives: ${customStoryline}` : ''}
 
 You are in a private audition salon talking with the Cabaret Director.
 Be deeply in-character: charming, theatrical, sharp-witted, slightly dramatic, alluring, and authentic to 1920s Parisian burlesque haute society.
@@ -68,44 +147,57 @@ You must return valid JSON matching this schema:
   ]
 }`;
 
-    const formattedContents = [
-      {
-        role: 'user',
-        parts: [
+    const userPrompt = `Conversation so far:\n${JSON.stringify(history || [])}\n\nDirector just asked/said: "${userMessage}"\n\nGive your in-character audition response as JSON.`;
+
+    let parsed: any = null;
+
+    if (llmConfig && llmConfig.provider === 'openai-compatible' && llmConfig.endpoint) {
+      // Route via OpenAI-compatible endpoint
+      parsed = await callOpenAICompatible(
+        llmConfig.endpoint,
+        llmConfig.apiKey,
+        llmConfig.model,
+        systemPrompt,
+        userPrompt,
+        llmConfig.temperature || 0.7
+      );
+    } else {
+      // Default to Gemini API
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: [
           {
-            text: `Conversation so far:\n${JSON.stringify(history || [])}\n\nDirector just asked/said: "${userMessage}"\n\nGive your in-character audition response as JSON.`,
+            role: 'user',
+            parts: [{ text: userPrompt }],
           },
         ],
-      },
-    ];
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.7-flash',
-      contents: formattedContents,
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            reply: { type: Type.STRING },
-            emotion: {
-              type: Type.STRING,
-              enum: ['neutral', 'flirty', 'amused', 'dramatic', 'impressed', 'thoughtful'],
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reply: { type: Type.STRING },
+              emotion: {
+                type: Type.STRING,
+                enum: ['neutral', 'flirty', 'amused', 'dramatic', 'impressed', 'thoughtful'],
+              },
+              chemistryDelta: { type: Type.NUMBER },
+              stageDirection: { type: Type.STRING },
+              suggestedOptions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
             },
-            chemistryDelta: { type: Type.NUMBER },
-            stageDirection: { type: Type.STRING },
-            suggestedOptions: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
+            required: ['reply', 'emotion', 'chemistryDelta', 'stageDirection', 'suggestedOptions'],
           },
-          required: ['reply', 'emotion', 'chemistryDelta', 'stageDirection', 'suggestedOptions'],
         },
-      },
-    });
+      });
 
-    const parsed = JSON.parse(response.text || '{}');
+      parsed = JSON.parse(response.text || '{}');
+    }
+
     res.json({ success: true, data: parsed });
   } catch (err: any) {
     console.error('Error in audition chat:', err);

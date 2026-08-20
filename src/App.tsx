@@ -6,8 +6,9 @@ import { AuditionScreen } from './screens/AuditionScreen';
 import { TroupeScreen } from './screens/TroupeScreen';
 import { WardrobeScreen } from './screens/WardrobeScreen';
 import { DemandsScreen } from './screens/DemandsScreen';
+import { StudioEditorScreen } from './screens/StudioEditorScreen';
 import { CrisisOverlay } from './components/CrisisOverlay';
-import { StarletStats, GameView, WardrobeItem, Crisis, DancerCandidate } from './types';
+import { StarletStats, GameView, WardrobeItem, Crisis, DancerCandidate, LLMConfig } from './types';
 import { INITIAL_DANCERS } from './data/dancers';
 
 const INITIAL_STATS: StarletStats = {
@@ -15,6 +16,16 @@ const INITIAL_STATS: StarletStats = {
   reaction: 92,
   tribute: 3500, // Generous starting funds so the player can immediately test and enjoy hiring a starlet
   tributePerSecond: 15,
+};
+
+const DEFAULT_LLM_CONFIG: LLMConfig = {
+  provider: 'gemini',
+  endpoint: 'https://api.openai.com/v1',
+  model: 'gpt-4o-mini',
+  apiKey: '',
+  temperature: 0.7,
+  customStorylinePrompt:
+    'Set in a lavish 1920s Parisian cabaret at the foot of Montmartre. Romantic, theatrical, witty, filled with champagne toasts, sparkling chandeliers, and haute couture.',
 };
 
 const WARDROBE_ITEMS: WardrobeItem[] = [
@@ -77,6 +88,32 @@ export default function App() {
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>(WARDROBE_ITEMS);
   const [dancers, setDancers] = useState<DancerCandidate[]>(INITIAL_DANCERS);
   const [activeCrisis, setActiveCrisis] = useState<Crisis | null>(null);
+  const [llmConfig, setLlmConfig] = useState<LLMConfig>(() => {
+    const saved = localStorage.getItem('aurelian_llm_config');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return DEFAULT_LLM_CONFIG;
+  });
+
+  const handleUpdateLLMConfig = (config: LLMConfig) => {
+    setLlmConfig(config);
+    localStorage.setItem('aurelian_llm_config', JSON.stringify(config));
+  };
+
+  const handleUpdateDancer = (updated: DancerCandidate) => {
+    setDancers((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+  };
+
+  const handleCreateDancer = (newDancer: DancerCandidate) => {
+    setDancers((prev) => [newDancer, ...prev]);
+  };
+
+  const handleDeleteDancer = (id: string) => {
+    setDancers((prev) => prev.filter((d) => d.id !== id));
+  };
 
   // Recalculate tribute per second based on wardrobe and hired stage dancers
   const calculateTps = useCallback(
@@ -248,6 +285,28 @@ export default function App() {
               candidates={dancers}
               tribute={stats.tribute}
               onHireDancer={handleHireDancer}
+              llmConfig={llmConfig}
+              onOpenStudio={() => setView('studio')}
+            />
+          )}
+
+          {view === 'studio' && (
+            <StudioEditorScreen
+              dancers={dancers}
+              onUpdateDancer={handleUpdateDancer}
+              onCreateDancer={handleCreateDancer}
+              onDeleteDancer={handleDeleteDancer}
+              llmConfig={llmConfig}
+              onUpdateLLMConfig={handleUpdateLLMConfig}
+              onGoToAudition={(dancerId) => {
+                // Move selected dancer to top so it's active in audition
+                setDancers((prev) => {
+                  const target = prev.find((d) => d.id === dancerId);
+                  if (!target) return prev;
+                  return [target, ...prev.filter((d) => d.id !== dancerId)];
+                });
+                setView('auditions');
+              }}
             />
           )}
 
@@ -258,6 +317,7 @@ export default function App() {
               onToggleStageAssignment={handleToggleStageAssignment}
               onGoToAuditions={() => setView('auditions')}
               onRehearseTroupe={handleRehearseTroupe}
+              onOpenStudio={() => setView('studio')}
             />
           )}
 

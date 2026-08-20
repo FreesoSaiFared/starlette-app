@@ -18,7 +18,7 @@ import {
   Info,
   CheckCircle2,
 } from 'lucide-react';
-import { DancerCandidate, AuditionDialogueMessage } from '../types';
+import { DancerCandidate, AuditionDialogueMessage, LLMConfig } from '../types';
 import { playPCM24kAudio, playChime, playContractSignedSfx, createSpeechRecognizer } from '../utils/audio';
 
 interface AuditionScreenProps {
@@ -26,12 +26,16 @@ interface AuditionScreenProps {
   tribute: number;
   onHireDancer: (candidate: DancerCandidate) => void;
   onSelectDancer?: (id: string) => void;
+  llmConfig?: LLMConfig;
+  onOpenStudio?: () => void;
 }
 
 export const AuditionScreen: React.FC<AuditionScreenProps> = ({
   candidates,
   tribute,
   onHireDancer,
+  llmConfig,
+  onOpenStudio,
 }) => {
   const [selectedCandidate, setSelectedCandidate] = useState<DancerCandidate>(candidates[0]);
   const [messages, setMessages] = useState<AuditionDialogueMessage[]>([]);
@@ -177,6 +181,7 @@ export const AuditionScreen: React.FC<AuditionScreenProps> = ({
             text: m.text,
           })),
           userMessage: textToSend,
+          llmConfig,
         }),
       });
 
@@ -309,7 +314,16 @@ export const AuditionScreen: React.FC<AuditionScreenProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {onOpenStudio && (
+            <button
+              onClick={onOpenStudio}
+              className="px-3 py-2 bg-[#d4af37]/15 hover:bg-[#d4af37]/25 border border-[#d4af37]/40 rounded-lg text-xs font-serif text-[#d4af37] flex items-center gap-1.5 transition-all shadow"
+            >
+              <Sparkles size={14} /> Persona & 3D Studio
+            </button>
+          )}
+
           <div className="bg-[#111] border border-[#d4af37]/30 px-4 py-2 rounded-lg flex items-center gap-3">
             <Flame className="text-[#d4af37]" size={18} />
             <div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Theater, Sparkles, Users, VenetianMask, Clock } from 'lucide-react';
+import { Theater, Sparkles, Users, VenetianMask, Clock, Sliders } from 'lucide-react';
 import { GameView } from '../types';
 
 interface LayoutProps {
@@ -28,13 +28,23 @@ export const Layout: React.FC<LayoutProps> = ({
             AURELIAN <span className="text-[#d4af37]">/</span> STARLET
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
             <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full text-xs font-mono text-[#d4af37]">
               <span>{tribute.toLocaleString()} Tribute</span>
             </div>
             <button
+              onClick={() => onViewChange('studio')}
+              className={`text-[10px] uppercase tracking-[0.2em] font-sans font-medium flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${
+                activeView === 'studio'
+                  ? 'bg-[#d4af37] text-black border-[#d4af37]'
+                  : 'bg-white/5 border-white/10 text-[#d4af37] hover:border-[#d4af37]'
+              }`}
+            >
+              <Sliders size={13} /> Studio
+            </button>
+            <button
               onClick={() => onViewChange('auditions')}
-              className="text-[#d4af37] hover:text-white transition-all text-[10px] uppercase tracking-[0.2em] font-sans font-medium flex items-center gap-1.5"
+              className="text-[#d4af37] hover:text-white transition-all text-[10px] uppercase tracking-[0.2em] font-sans font-medium flex items-center gap-1.5 hidden sm:flex"
             >
               <Sparkles size={13} /> Auditions
             </button>
@@ -58,6 +68,12 @@ export const Layout: React.FC<LayoutProps> = ({
           label="Auditions"
           active={activeView === 'auditions'}
           onClick={() => onViewChange('auditions')}
+        />
+        <NavButton
+          icon={<Sliders size={19} />}
+          label="Studio"
+          active={activeView === 'studio'}
+          onClick={() => onViewChange('studio')}
         />
         <NavButton
           icon={<Users size={19} />}
