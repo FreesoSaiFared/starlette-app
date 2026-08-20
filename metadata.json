@@ -1,0 +1,8 @@
+{
+  "name": "The Starlet",
+  "description": "A high-drama burlesque management game featuring high-fidelity cinematic fidelity and opulent stage performances.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
