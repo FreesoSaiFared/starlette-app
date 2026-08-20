@@ -119,27 +119,25 @@ app.post('/api/audition/chat', async (req, res) => {
   try {
     const { candidate, history, userMessage, llmConfig } = req.body;
 
-    const customStoryline = candidate.customStorylinePrompt || llmConfig?.customStorylinePrompt || '';
+    const customStoryline = candidate.customStorylinePrompt || llmConfig?.customStorylinePrompt || 'A high-stakes modern film and theatre production company.';
 
-    const systemPrompt = `You are playing ${candidate.name} ("${candidate.stageName}"), a prospective burlesque dancer auditioning to join a high-class Parisian Cabaret ("The Aurelian Starlet").
+    const systemPrompt = `You are playing ${candidate.name} ("${candidate.stageName}"), a prospective actor auditioning for a role.
 Character Profile:
-- Title: ${candidate.title}
 - Background: ${candidate.bio}
 - Personality: ${candidate.personality}
 - Voice style & Intonation: ${candidate.voiceStyle}
 - Specialty: ${candidate.specialty}
-${customStoryline ? `- Cabaret Storyline & Setting Directives: ${customStoryline}` : ''}
+- Storyline & Setting Directives: ${customStoryline}
 
-You are in a private audition salon talking with the Cabaret Director.
-Be deeply in-character: charming, theatrical, sharp-witted, slightly dramatic, alluring, and authentic to 1920s Parisian burlesque haute society.
-Respond to the Director's query.
+You are in a private audition room talking with the Director.
+Be deeply in-character: grounded, realistic, emotionally authentic, and dramatic. Respond to the Director's query.
 
 You must return valid JSON matching this schema:
 {
   "reply": "Your in-character spoken dialogue line (1-3 sentences, natural for spoken voice)",
   "emotion": "one of: neutral | flirty | amused | dramatic | impressed | thoughtful",
   "chemistryDelta": number between -5 and +15 reflecting how well the director's comment resonated,
-  "stageDirection": "Short visual novel action in brackets (e.g. *adjusts her silk gloves with a subtle smirk*)",
+  "stageDirection": "Short visual novel action in brackets (e.g. *leans forward intensely*)",
   "suggestedOptions": [
     "Option 1: Director's follow-up choice A",
     "Option 2: Director's follow-up choice B",
@@ -152,7 +150,6 @@ You must return valid JSON matching this schema:
     let parsed: any = null;
 
     if (llmConfig && llmConfig.provider === 'openai-compatible' && llmConfig.endpoint) {
-      // Route via OpenAI-compatible endpoint
       parsed = await callOpenAICompatible(
         llmConfig.endpoint,
         llmConfig.apiKey,
@@ -162,16 +159,10 @@ You must return valid JSON matching this schema:
         llmConfig.temperature || 0.7
       );
     } else {
-      // Default to Gemini API
       const ai = getAI();
       const response = await ai.models.generateContent({
         model: 'gemini-3.7-flash',
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userPrompt }],
-          },
-        ],
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: 'application/json',
@@ -179,22 +170,15 @@ You must return valid JSON matching this schema:
             type: Type.OBJECT,
             properties: {
               reply: { type: Type.STRING },
-              emotion: {
-                type: Type.STRING,
-                enum: ['neutral', 'flirty', 'amused', 'dramatic', 'impressed', 'thoughtful'],
-              },
+              emotion: { type: Type.STRING, enum: ['neutral', 'flirty', 'amused', 'dramatic', 'impressed', 'thoughtful'] },
               chemistryDelta: { type: Type.NUMBER },
               stageDirection: { type: Type.STRING },
-              suggestedOptions: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-              },
+              suggestedOptions: { type: Type.ARRAY, items: { type: Type.STRING } },
             },
             required: ['reply', 'emotion', 'chemistryDelta', 'stageDirection', 'suggestedOptions'],
           },
         },
       });
-
       parsed = JSON.parse(response.text || '{}');
     }
 
@@ -205,15 +189,94 @@ You must return valid JSON matching this schema:
       success: false,
       error: err?.message || 'Failed to generate dialogue',
       fallback: {
-        reply: "Ah, mon cher Directeur, the stage is my sanctuary. Give me the spotlight, and I shall make the audience weep with ecstasy.",
-        emotion: 'flirty',
+        reply: "I'm ready for the next scene. Let's make it real.",
+        emotion: 'neutral',
         chemistryDelta: 5,
-        stageDirection: '*takes a slow sip of champagne with an enigmatic gaze*',
-        suggestedOptions: [
-          'Show me your signature solo routine.',
-          'What makes you stand out from the other starlets?',
-          'The salary is demanding, but the glory is unmatched.',
-        ],
+        stageDirection: '*adjusts script*',
+        suggestedOptions: ['Show me your emotional range.', 'What drives you?', 'Take it from the top.'],
+      },
+    });
+  }
+});
+
+// 1.5 Scenario Visual Novel Chat Endpoint
+app.post('/api/scenario/chat', async (req, res) => {
+  try {
+    const { scenario, history, userMessage, llmConfig } = req.body;
+
+    const customStoryline = llmConfig?.customStorylinePrompt || 'A high-stakes modern film and theatre production company.';
+    
+    const systemPrompt = `You are running a dramatic visual novel scenario as the characters and the world.
+Scenario: ${scenario.title}
+Context: ${scenario.description}
+System Prompt Override: ${scenario.systemPrompt}
+World Setting: ${customStoryline}
+
+You are acting as the characters involved. The user is the Director navigating this drama.
+Continue the scene naturally, reacting to the Director's actions/words. Stay grounded and realistic.
+
+You must return valid JSON matching this schema:
+{
+  "reply": "The in-character spoken dialogue or narration (1-3 sentences)",
+  "speaker": "The name of the character currently speaking, or 'Narrator'",
+  "emotion": "one of: neutral | angry | sad | dramatic | thoughtful | amused",
+  "stageDirection": "Short visual novel action in brackets (e.g. *throws script on the table*)",
+  "suggestedOptions": [
+    "Option 1: Director's response A",
+    "Option 2: Director's response B",
+    "Option 3: Director's response C"
+  ]
+}`;
+
+    const userPrompt = `Conversation so far:\n${JSON.stringify(history || [])}\n\nDirector action/speech: "${userMessage}"\n\nContinue the scenario drama as JSON.`;
+
+    let parsed: any = null;
+
+    if (llmConfig && llmConfig.provider === 'openai-compatible' && llmConfig.endpoint) {
+      parsed = await callOpenAICompatible(
+        llmConfig.endpoint,
+        llmConfig.apiKey,
+        llmConfig.model,
+        systemPrompt,
+        userPrompt,
+        llmConfig.temperature || 0.7
+      );
+    } else {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.7-flash',
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              reply: { type: Type.STRING },
+              speaker: { type: Type.STRING },
+              emotion: { type: Type.STRING, enum: ['neutral', 'angry', 'sad', 'dramatic', 'thoughtful', 'amused'] },
+              stageDirection: { type: Type.STRING },
+              suggestedOptions: { type: Type.ARRAY, items: { type: Type.STRING } },
+            },
+            required: ['reply', 'speaker', 'emotion', 'stageDirection', 'suggestedOptions'],
+          },
+        },
+      });
+      parsed = JSON.parse(response.text || '{}');
+    }
+
+    res.json({ success: true, data: parsed });
+  } catch (err: any) {
+    console.error('Error in scenario chat:', err);
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to generate scenario step',
+      fallback: {
+        reply: "The tension in the room is palpable.",
+        speaker: 'Narrator',
+        emotion: 'neutral',
+        stageDirection: '*silence falls over the room*',
+        suggestedOptions: ['Call for a break.', 'Push them harder.', 'Ask what is wrong.'],
       },
     });
   }

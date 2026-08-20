@@ -68,7 +68,16 @@ export interface AuditionDialogueMessage {
   timestamp: number;
 }
 
-export type GameView = 'cinematic' | 'stage' | 'auditions' | 'troupe' | 'studio' | 'wardrobe' | 'mirror' | 'demands' | 'gifts';
+export interface DramaScenario {
+  id: string;
+  title: string;
+  description: string;
+  systemPrompt: string;
+  startingMessage: string;
+  participants: string[];
+}
+
+export type GameView = 'cinematic' | 'stage' | 'auditions' | 'troupe' | 'studio' | 'wardrobe' | 'mirror' | 'scenarios' | 'demands' | 'gifts';
 
 export interface Crisis {
   id: string;

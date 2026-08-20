@@ -89,9 +89,9 @@ export const Layout: React.FC<LayoutProps> = ({
         />
         <NavButton
           icon={<Clock size={19} />}
-          label="Whims"
-          active={activeView === 'demands' || activeView === 'gifts' || activeView === 'mirror'}
-          onClick={() => onViewChange('demands')}
+          label="Scenarios"
+          active={activeView === 'scenarios' || activeView === 'demands'}
+          onClick={() => onViewChange('scenarios')}
         />
       </nav>
     </div>

@@ -25,7 +25,7 @@ const DEFAULT_LLM_CONFIG: LLMConfig = {
   apiKey: '',
   temperature: 0.7,
   customStorylinePrompt:
-    'Set in a lavish 1920s Parisian cabaret at the foot of Montmartre. Romantic, theatrical, witty, filled with champagne toasts, sparkling chandeliers, and haute couture.',
+    'A high-stakes modern film and theatre production company. The tone is grounded, realistic, dramatic, and emotionally complex. No cliches, just real human conflict and ambition.',
 };
 
 const WARDROBE_ITEMS: WardrobeItem[] = [
@@ -330,10 +330,11 @@ export default function App() {
             />
           )}
 
-          {(view === 'demands' || view === 'gifts' || view === 'mirror') && (
+          {(view === 'scenarios' || view === 'demands' || view === 'gifts' || view === 'mirror') && (
             <DemandsScreen
               onReturnToStage={() => setView('stage')}
               onGoToAuditions={() => setView('auditions')}
+              llmConfig={llmConfig}
             />
           )}
         </Layout>

@@ -61,14 +61,14 @@ export const StageScreen: React.FC<StageScreenProps> = ({
     // Trigger the related 3D animation and on-stage feedback badge
     if (type === 'encourage') {
       setModelAction('dance');
-      setActionFeedback('Frenzied Cancan Routine!');
+      setActionFeedback('Intense emotional breakthrough!');
       setTimeout(() => {
         setModelAction('idle');
         setActionFeedback(null);
       }, 3500);
     } else if (type === 'applaud') {
       setModelAction('bow');
-      setActionFeedback('Encore Theatrical Curtsy!');
+      setActionFeedback('Scene cut! Brilliant performance.');
       setTimeout(() => {
         setModelAction('idle');
         setActionFeedback(null);
@@ -82,7 +82,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
       <section className="relative w-full aspect-[21/9] overflow-hidden border border-white/10 bg-[#070606] rounded-2xl shadow-2xl">
         {/* 3D Character Canvas */}
         <div className="absolute inset-0 z-0 opacity-95 cursor-grab active:cursor-grabbing">
-          <CanvasErrorBoundary>
+            <CanvasErrorBoundary>
             <Canvas camera={{ position: [0, 0.4, 5.2], fov: 42 }}>
               {/* Studio Stage Lighting Setup */}
               <ambientLight intensity={0.65} color="#fff6e8" />
@@ -140,10 +140,10 @@ export const StageScreen: React.FC<StageScreenProps> = ({
           </span>
           <span className="font-sans text-[10px] uppercase tracking-[0.3em] text-[#d4af37]">
             {modelAction === 'dance'
-              ? 'Cancan Choreography'
+              ? 'Intense Routine'
               : modelAction === 'bow'
-              ? 'Encore Curtsy'
-              : 'Grand Revue Live'}
+              ? 'Closing Bow'
+              : 'Studio Stage Live'}
           </span>
         </div>
 
@@ -164,11 +164,11 @@ export const StageScreen: React.FC<StageScreenProps> = ({
         {/* Legend/Name Overlay */}
         <div className="absolute inset-x-0 bottom-0 p-8 md:p-10 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent z-20 flex flex-col items-start w-full pointer-events-none">
           <h2 className="font-serif text-3xl md:text-5xl font-light text-white tracking-tight mb-1 italic">
-            The Starlet Revue
+            The Studio Stage
           </h2>
           <div className="flex items-center gap-2 text-[#d4af37]">
             <span className="font-sans text-[10px] uppercase tracking-[0.25em]">
-              Haute Burlesque • Live on Stage
+              Theatrical Performance • Live on Stage
             </span>
           </div>
         </div>
@@ -255,7 +255,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
               modelAction === 'dance' ? 'bg-[#d4af37] text-black font-medium' : ''
             }`}
           >
-            Encourage (Cancan Dance)
+            Direct: Push the Emotion
           </button>
 
           <button
@@ -264,7 +264,7 @@ export const StageScreen: React.FC<StageScreenProps> = ({
               modelAction === 'bow' ? 'bg-[#d4af37] text-black font-medium' : ''
             }`}
           >
-            Applaud (Theatrical Curtsy)
+            Call: "Cut! Brilliant."
           </button>
         </div>
       </section>

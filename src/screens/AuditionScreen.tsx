@@ -41,9 +41,9 @@ export const AuditionScreen: React.FC<AuditionScreenProps> = ({
   const [messages, setMessages] = useState<AuditionDialogueMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [suggestedOptions, setSuggestedOptions] = useState<string[]>([
-    'Tell me of your finest Parisian triumph.',
-    'What sets your routine apart from every other starlet in town?',
-    'Our patrons expect pure magnetic drama. Can you deliver?',
+    'Show me the real you, not just the lines.',
+    'What sets your performance apart from the others?',
+    'This script demands pure, raw emotion. Can you go there?',
   ]);
   const [chemistry, setChemistry] = useState<number>(50);
   const [emotion, setEmotion] = useState<'neutral' | 'flirty' | 'amused' | 'dramatic' | 'impressed' | 'thoughtful'>('flirty');
@@ -310,7 +310,7 @@ export const AuditionScreen: React.FC<AuditionScreenProps> = ({
             </h1>
           </div>
           <p className="text-white/60 text-xs md:text-sm font-sans tracking-wide mt-1">
-            Interview, hear, and recruit prospective burlesque starlets to expand your Troupe.
+            Interview, hear, and recruit prospective actors to expand your cast.
           </p>
         </div>
 
@@ -327,7 +327,7 @@ export const AuditionScreen: React.FC<AuditionScreenProps> = ({
           <div className="bg-[#111] border border-[#d4af37]/30 px-4 py-2 rounded-lg flex items-center gap-3">
             <Flame className="text-[#d4af37]" size={18} />
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-white/50">Cabaret Treasury</div>
+              <div className="text-[10px] uppercase tracking-widest text-white/50">Studio Treasury</div>
               <div className="text-sm font-serif font-bold text-[#d4af37]">{tribute.toLocaleString()} Tribute</div>
             </div>
           </div>
@@ -467,7 +467,7 @@ export const AuditionScreen: React.FC<AuditionScreenProps> = ({
 
             {selectedCandidate.hired ? (
               <div className="w-full py-3 bg-emerald-950/50 border border-emerald-500/40 rounded-lg text-emerald-400 text-center text-xs uppercase tracking-widest font-serif flex items-center justify-center gap-2">
-                <UserCheck size={16} /> Hired to Cabaret Troupe
+                <UserCheck size={16} /> Hired to Studio Cast
               </div>
             ) : (
               <button

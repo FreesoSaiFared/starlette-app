@@ -34,11 +34,11 @@ export const TroupeScreen: React.FC<TroupeScreenProps> = ({
           <div className="flex items-center gap-2">
             <Users className="text-[#d4af37]" size={22} />
             <h1 className="font-serif text-2xl md:text-3xl tracking-tight text-white font-light">
-              THE BURLESQUE ENSEMBLE
+              THE ACTING ENSEMBLE
             </h1>
           </div>
           <p className="text-white/60 text-xs md:text-sm font-sans tracking-wide mt-1">
-            Manage your hired cabaret starlets, stage choreographies, and ensemble synergies.
+            Manage your hired actors, cast performances, and ensemble synergies.
           </p>
         </div>
 
@@ -60,14 +60,14 @@ export const TroupeScreen: React.FC<TroupeScreenProps> = ({
             disabled={hiredDancers.length === 0}
             className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/20 rounded-xl text-xs uppercase font-serif tracking-widest text-[#d4af37] flex items-center gap-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Music size={16} /> Call Troupe Rehearsal (+Happiness)
+            <Music size={16} /> Call Table Read (+Happiness)
           </button>
 
           <button
             onClick={onGoToAuditions}
             className="px-5 py-2.5 bg-gradient-to-r from-[#d4af37] to-[#b8860b] text-black font-serif text-xs uppercase tracking-widest rounded-xl font-medium hover:brightness-110 shadow-lg flex items-center gap-2 transition-all"
           >
-            <Sparkles size={16} /> Audition New Dancers
+            <Sparkles size={16} /> Audition New Cast
           </button>
         </div>
       </div>
@@ -77,7 +77,7 @@ export const TroupeScreen: React.FC<TroupeScreenProps> = ({
         <div className="bg-[#0e0e0e] border border-white/10 p-5 rounded-2xl">
           <div className="text-[11px] uppercase tracking-widest text-white/50 mb-1">Ensemble Size</div>
           <div className="text-2xl font-serif text-white font-light">
-            {hiredDancers.length} <span className="text-xs text-white/40 font-sans">/ {dancers.length} Starlets</span>
+            {hiredDancers.length} <span className="text-xs text-white/40 font-sans">/ {dancers.length} Actors</span>
           </div>
         </div>
 
